@@ -1,0 +1,169 @@
+// ============================================================
+// TradeCore — Prisma Schema
+// Maps directly from ER Diagram (docs/ErDiagram.md)
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// User — Core user entity with role-based access
+// ============================================================
+model User {
+  id           String        @id @default(uuid())
+  username     String        @unique
+  email        String        @unique
+  passwordHash String        @map("password_hash")
+  role         UserRole      @default(TRADER)
+  createdAt    DateTime      @default(now()) @map("created_at")
+
+  wallet       Wallet?
+  orders       Order[]
+  portfolios   Portfolio[]
+  transactions Transaction[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  TRADER
+  ADMIN
+}
+
+// ============================================================
+// Wallet — 1:1 with User, manages balance and reservations
+// ============================================================
+model Wallet {
+  id              String   @id @default(uuid())
+  userId          String   @unique @map("user_id")
+  balance         Decimal  @default(0) @db.Decimal(18, 8)
+  reservedBalance Decimal  @default(0) @map("reserved_balance") @db.Decimal(18, 8)
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("wallets")
+}
+
+// ============================================================
+// Order — Buy/Sell orders with lifecycle status tracking
+// ============================================================
+model Order {
+  id             String      @id @default(uuid())
+  userId         String      @map("user_id")
+  orderType      OrderType   @map("order_type")
+  side           OrderSide
+  price          Decimal     @db.Decimal(18, 8)
+  quantity       Decimal     @db.Decimal(18, 8)
+  filledQuantity Decimal     @default(0) @map("filled_quantity") @db.Decimal(18, 8)
+  status         OrderStatus @default(PENDING)
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  buyTrades  Trade[] @relation("BuyOrderTrades")
+  sellTrades Trade[] @relation("SellOrderTrades")
+
+  @@index([userId])
+  @@index([status])
+  @@index([side, price])
+  @@map("orders")
+}
+
+enum OrderType {
+  LIMIT
+  MARKET
+}
+
+enum OrderSide {
+  BUY
+  SELL
+}
+
+enum OrderStatus {
+  PENDING
+  PARTIAL
+  FILLED
+  CANCELLED
+}
+
+// ============================================================
+// Trade — Generated when buy and sell orders match
+// ============================================================
+model Trade {
+  id          String   @id @default(uuid())
+  buyOrderId  String   @map("buy_order_id")
+  sellOrderId String   @map("sell_order_id")
+  price       Decimal  @db.Decimal(18, 8)
+  quantity    Decimal  @db.Decimal(18, 8)
+  executedAt  DateTime @default(now()) @map("executed_at")
+
+  buyOrder     Order         @relation("BuyOrderTrades", fields: [buyOrderId], references: [id])
+  sellOrder    Order         @relation("SellOrderTrades", fields: [sellOrderId], references: [id])
+  transactions Transaction[]
+
+  @@index([buyOrderId])
+  @@index([sellOrderId])
+  @@index([executedAt])
+  @@map("trades")
+}
+
+// ============================================================
+// Portfolio — Tracks user holdings per asset
+// ============================================================
+model Portfolio {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  assetSymbol  String   @map("asset_symbol")
+  quantity     Decimal  @default(0) @db.Decimal(18, 8)
+  averagePrice Decimal  @default(0) @map("average_price") @db.Decimal(18, 8)
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, assetSymbol])
+  @@map("portfolios")
+}
+
+// ============================================================
+// Transaction — Financial transaction records
+// ============================================================
+model Transaction {
+  id              String          @id @default(uuid())
+  userId          String          @map("user_id")
+  tradeId         String?         @map("trade_id")
+  transactionType TransactionType @map("transaction_type")
+  amount          Decimal         @db.Decimal(18, 8)
+  createdAt       DateTime        @default(now()) @map("created_at")
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trade Trade? @relation(fields: [tradeId], references: [id])
+
+  @@index([userId])
+  @@map("transactions")
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  TRADE_BUY
+  TRADE_SELL
+}
+
+// ============================================================
+// OrderBookSnapshot — Periodic snapshots for analytics
+// ============================================================
+model OrderBookSnapshot {
+  id             String   @id @default(uuid())
+  totalBuyVolume Decimal  @map("total_buy_volume") @db.Decimal(18, 8)
+  totalSellVolume Decimal @map("total_sell_volume") @db.Decimal(18, 8)
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  @@map("order_book_snapshots")
+}

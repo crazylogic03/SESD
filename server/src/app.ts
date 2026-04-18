@@ -56,16 +56,9 @@ simulator.initialize().then(() => {
 });
 
 httpServer.listen(config.port, () => {
-  logger.info(`
-╔══════════════════════════════════════════════════╗
-║                                                  ║
-║     ⚡ TradeCore Matching Engine v1.0.0          ║
-║                                                  ║
-║     Server:    http://localhost:${config.port}          ║
+  logger.info(`Server:    http://localhost:${config.port}
 ║     WebSocket: ws://localhost:${config.port}            ║
-║     Env:       ${config.nodeEnv.padEnd(18)}         ║
-║                                                  ║
-╚══════════════════════════════════════════════════╝
+║     Env:       ${config.nodeEnv.padEnd(18)}
   `);
 });
 

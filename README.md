@@ -84,6 +84,37 @@ TradeCore follows Clean Architecture and Domain-Driven Design principles:
 
 ---
 
+## Project Structure
+
+```text
+SESD/
+├── client/                  # Frontend React application
+│   ├── public/              # Static assets
+│   └── src/
+│       ├── components/      # Reusable React components
+│       ├── context/         # Global state management
+│       ├── hooks/           # Custom React hooks
+│       ├── pages/           # Application route components
+│       └── services/        # API calling and WebSocket integration
+└── server/                  # Backend Express application
+    ├── prisma/              # Database schema and migrations
+    └── src/
+        ├── config/          # Environment and configuration variables
+        ├── controllers/     # Request handlers and business logic entry points
+        ├── domain/          # Core domain models and entities
+        ├── engine/          # Order matching engine and core logic
+        ├── factories/       # Object creation logic
+        ├── middleware/      # Express middleware functions
+        ├── observers/       # Event listeners and pub/sub handlers
+        ├── repositories/    # Data access layer
+        ├── routes/          # Express route definitions
+        ├── services/        # Business logic services
+        ├── utils/           # Helper functions and utilities
+        └── websocket/       # Socket.io event handlers
+```
+
+---
+
 ## Project Setup Instructions
 
 Follow these instructions to set up and run the TradeCore application locally.
